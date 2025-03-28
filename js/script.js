@@ -59,7 +59,8 @@ function saveToLocalStorage(product) {
 
 // Check if a product is expiring within 5 days
 function isExpiringSoon(expiryDate) {
-  const currentDate = new Date('2025-03-27T00:00:00'); // Current date as per system, set to midnight
+ const currentDate = new Date();
+currentDate.setHours(0, 0, 0, 0); // Current date as per system, set to midnight
   let expDate;
   
   try {
