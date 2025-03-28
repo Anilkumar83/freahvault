@@ -26,7 +26,8 @@
   <script src="js/script.js"></script>
   <script>
     // Initialize WebSocket
-    const ws = new WebSocket('ws://192.168.1.141:3000'); // Use 'wss://your-domain.com' in production
+   // Connect to WebSocket server
+const ws = new WebSocket('wss://freahvault.onrender.com');// Use 'wss://your-domain.com' in production
 
     ws.onopen = () => {
       console.log('Connected to WebSocket server');
