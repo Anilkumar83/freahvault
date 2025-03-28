@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreshVault - Advanced Grocery Store</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">FreshVault</div>
+    <div class="navbar-right">
+      <a href="#expiring-section" class="notification">
+        <span class="notification-icon">🔔</span>
+        <span id="notification-count" class="badge">0</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <header>
+    <h1>Welcome to FreshVault</h1>
+    <p>Manage your grocery inventory with ease!</p>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Manual Entry Form -->
+    <section class="manual-entry">
+      <h2>Add Product Manually</h2>
+      <form id="manual-entry-form">
+        <div class="form-group">
+          <label for="id">Product ID:</label>
+          <input type="number" id="id" name="id" required>
+        </div>
+        <div class="form-group">
+          <label for="name">Name:</label>
+          <input type="text" id="name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label for="price">Price ($):</label>
+          <input type="number" id="price" name="price" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label for="category">Category:</label>
+          <input type="text" id="category" name="category" required>
+        </div>
+        <div class="form-group">
+          <label for="weight">Weight:</label>
+          <input type="text" id="weight" name="weight" required>
+        </div>
+        <div class="form-group">
+          <label for="protein">Protein:</label>
+          <input type="text" id="protein" name="protein" required>
+        </div>
+        <div class="form-group">
+          <label for="vitamins">Vitamins:</label>
+          <input type="text" id="vitamins" name="vitamins" required>
+        </div>
+        <div class="form-group">
+          <label for="manufacturingDate">Manufacturing Date:</label>
+          <input type="date" id="manufacturingDate" name="manufacturingDate" required>
+        </div>
+        <div class="form-group">
+          <label for="expiryDate">Expiry Date:</label>
+          <input type="date" id="expiryDate" name="expiryDate" required>
+        </div>
+        <button type="submit">Add Product</button>
+      </form>
+    </section>
+
+    <!-- All Products Section -->
+    <section class="product-section">
+      <h2>All Products</h2>
+      <div id="product-list" class="product-grid">
+        <!-- Products will be displayed here -->
+      </div>
+    </section>
+
+    <!-- Expiring Products Section -->
+    <section id="expiring-section" class="product-section expiring-section">
+      <h2>Expiring Products (Within 5 Days) <span id="expiring-count" class="badge">0</span></h2>
+      <div id="expiring-list" class="product-grid">
+        <!-- Expiring products will be displayed here -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2025 FreshVault. All rights reserved.</p>
+  </footer>
+
+  <script src="js/script.js"></script>
+  <script>
+    // Connect to WebSocket server
+    const ws = new WebSocket('ws://192.168.1.141:3000'); // Use 'wss://your-domain.com' in production
+
+    ws.onopen = () => {
+      console.log('Connected to WebSocket server');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error on website:', error);
+      alert('WebSocket connection failed. Please check the server and refresh the page.');
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      alert('WebSocket connection closed. Please refresh the page to reconnect.');
+    };
+
+    ws.onmessage = (event) => {
+      console.log('Received message:', event.data);
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'initial' || data.type === 'update') {
+          // Update the entire product list
+          updateProductList(data.products);
+          updateExpiringList(data.products);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    // Load products from local storage on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const products = JSON.parse(localStorage.getItem('products')) || [];
+      updateProductList(products);
+      updateExpiringList(products);
+
+      // Handle manual entry form submission
+      const form = document.getElementById('manual-entry-form');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const product = {
+          id: parseInt(document.getElementById('id').value),
+          name: document.getElementById('name').value,
+          price: parseFloat(document.getElementById('price').value),
+          category: document.getElementById('category').value,
+          weight: document.getElementById('weight').value,
+          protein: document.getElementById('protein').value,
+          vitamins: document.getElementById('vitamins').value,
+          manufacturingDate: document.getElementById('manufacturingDate').value,
+          expiryDate: document.getElementById('expiryDate').value,
+        };
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(product));
+          console.log('Manually added product sent to server:', product);
+        } else {
+          alert('WebSocket is not connected. Please refresh the page.');
+        }
+        form.reset();
+      });
+    });
+  </script>
+</body>
+</html>

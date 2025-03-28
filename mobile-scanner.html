@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreshVault - Mobile Scanner</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>FreshVault Scanner</h1>
+    <p>Scan Product QR Code</p>
+  </header>
+
+  <main>
+    <video id="video" width="100%" height="auto" autoplay playsinline></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <p id="result">Scan a QR code to see the product details.</p>
+  </main>
+
+  <footer>
+    <p>© 2025 FreshVault. All rights reserved.</p>
+  </footer>
+
+  <script src="js/jsQR.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    // Initialize WebSocket
+    const ws = new WebSocket('ws://192.168.1.141:3000'); // Use 'wss://your-domain.com' in production
+
+    ws.onopen = () => {
+      console.log('Connected to WebSocket server');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error on mobile:', error);
+      document.getElementById('result').textContent = 'WebSocket connection failed. Please check the server.';
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      document.getElementById('result').textContent = 'WebSocket connection closed. Please refresh the page.';
+    };
+
+    // QR Code Scanning
+    const video = document.getElementById('video');
+    const canvasElement = document.getElementById('canvas');
+    const canvas = canvasElement.getContext('2d');
+    const result = document.getElementById('result');
+
+    // Request camera access
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then((stream) => {
+        video.srcObject = stream;
+        video.setAttribute('playsinline', true); // Required for iOS
+        video.play();
+        requestAnimationFrame(tick);
+      })
+      .catch((err) => {
+        result.textContent = 'Error accessing camera: ' + err.message;
+      });
+
+    function tick() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvasElement.height = video.videoHeight;
+        canvasElement.width = video.videoWidth;
+        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        });
+
+        if (code) {
+          try {
+            const product = JSON.parse(code.data);
+            result.textContent = `Product: ${product.name}, Price: $${product.price}, Expiry: ${product.expiryDate}`;
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(product)); // Send to server
+              console.log('Product sent to server:', product);
+            } else {
+              console.error('WebSocket is not open. Cannot send product data.');
+              result.textContent = 'Failed to sync product: WebSocket not connected.';
+            }
+          } catch (error) {
+            result.textContent = 'Invalid QR code data: ' + error.message;
+          }
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+  </script>
+</body>
+</html>
